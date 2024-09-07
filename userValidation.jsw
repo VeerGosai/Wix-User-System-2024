@@ -1,0 +1,94 @@
+import wixData from 'wix-data';
+import { currentUser } from 'wix-users-backend';
+
+// Function to validate user login and pull information
+export async function getUserProfile() {
+    let user = currentUser;
+
+    if (!user.loggedIn) {
+        return { error: 'User not logged in' };
+    }
+
+    let userId = user.id;
+
+    // Pulling standard Wix user information
+    let email = user.getEmail();
+    let profilePic = user.getPhoto();
+    let firstName = user.getFirstName();
+    let lastName = user.getLastName();
+
+    // Query the custom UserProfile collection for additional data
+    try {
+        let userProfile = await wixData.query('UserProfile')
+            .eq('userId', userId)
+            .find();
+
+        if (userProfile.items.length > 0) {
+            let userProfileData = userProfile.items[0];
+            return {
+                userId: userId,
+                firstName: firstName || userProfileData.firstName,
+                lastName: lastName || userProfileData.lastName,
+                email: email,
+                profilePic: profilePic,
+                idNumber: userProfileData.idNumber,
+                username: userProfileData.username,
+                slug: userProfileData.slug,
+                addresses: userProfileData.addresses,
+                telephoneNumbers: userProfileData.telephoneNumbers,
+                deviceNumbers: userProfileData.deviceNumbers,
+                description: userProfileData.description,
+                messages: userProfileData.messages,
+                dataFiles: userProfileData.dataFiles
+            };
+        } else {
+            return { error: 'User profile not found in database' };
+        }
+    } catch (err) {
+        return { error: 'Error retrieving user data: ' + err.message };
+    }
+}
+
+// Function to validate user access (e.g., admin or specific role)
+export async function validateUserRole(role) {
+    let user = currentUser;
+
+    if (!user.loggedIn) {
+        return { error: 'User not logged in' };
+    }
+
+    let userRoles = await user.getRoles();
+    if (userRoles.includes(role)) {
+        return { status: 'User is valid and has access' };
+    } else {
+        return { error: 'User does not have the required role' };
+    }
+}
+
+
+//use of module
+/*
+import { getUserProfile } from 'backend/userValidation';
+
+$w.onReady(async function () {
+    try {
+        let userProfile = await getUserProfile();
+
+        if (userProfile.error) {
+            console.error(userProfile.error);
+        } else {
+            // Display user data on the page
+            $w('#firstNameText').text = userProfile.firstName;
+            $w('#lastNameText').text = userProfile.lastName;
+            $w('#emailText').text = userProfile.email;
+            $w('#profileImage').src = userProfile.profilePic;
+            $w('#descriptionText').text = userProfile.description;
+            // ...populate other fields on the page
+        }
+    } catch (error) {
+        console.error('Failed to retrieve user profile:', error);
+    }
+});
+*/
+
+
